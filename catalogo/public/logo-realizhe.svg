@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="80" viewBox="0 0 240 80">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d62828"/>
+      <stop offset="100%" stop-color="#f24141"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="80" rx="20" fill="url(#grad)"/>
+  <g fill="none" stroke="#f9fafb" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" transform="translate(24 18)">
+    <path d="M20 8c-6 6.8-6 19.2 0 26"/>
+    <path d="M20 8c6 6.8 6 19.2 0 26"/>
+    <path d="M9 23c6.2-1.2 11.2-4.5 11-9"/>
+    <path d="M31 23c-6.2-1.2-11.2-4.5-11-9"/>
+  </g>
+  <text x="70" y="47" fill="#f9fafb" font-family="Poppins, Arial, sans-serif" font-size="28" font-weight="600" letter-spacing="0.14em">REALIZHE</text>
+</svg>

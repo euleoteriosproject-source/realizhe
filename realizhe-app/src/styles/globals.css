@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    background-color: #f8f8f8;
+    color: #222222;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-[var(--background)] text-[var(--foreground)] font-sans antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-tight text-foreground;
+  }
+
+  a {
+    @apply transition-colors;
+  }
+
+  :root {
+    --background: #f8f8f8;
+    --foreground: #222222;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #d62828, #ff8661);
+  }
+
+  .card-surface {
+    @apply rounded-3xl border border-border bg-white shadow-card;
+  }
+}
