@@ -1,0 +1,158 @@
+*** Begin Patch
+*** Update File: src/app/api/auth/signup/route.ts
+@@
+-    const createResult = await admin.createUser({
+-      email: normalizedEmail,
+-      password,
+-      email_confirm: true,
+-      user_metadata: {
+-        nome: trimmedNome,
+-        telefone: trimmedTelefone,
+-      },
+-    });
+-
+-    let createdUserId: string | null = null;
+-
+-    if (createResult.error || !createResult.data.user) {
+-      const mapped = mapSupabaseError(createResult.error?.message);
+-
+-      if (mapped.status === 409) {
+-        try {
+-          const existingUser = await findUserByEmail(
+-            admin,
+-            normalizedEmail,
+-          );
+-
+-          if (existingUser) {
+-            await admin.updateUserById(existingUser.id, {
+-              password,
+-              user_metadata: {
+-                nome: trimmedNome,
+-                telefone: trimmedTelefone,
+-              },
+-            });
+-
+-            await upsertCliente({
+-              user_id: existingUser.id,
+-              nome: trimmedNome,
+-              email: normalizedEmail,
+-              telefone: trimmedTelefone,
+-              cpf: typeof cpf === "string" ? cpf.trim() : cpf,
+-              endereco:
+-                typeof endereco === "string" ? endereco.trim() : endereco,
+-              cidade: typeof cidade === "string" ? cidade.trim() : cidade,
+-              cep: typeof cep === "string" ? cep.trim() : cep,
+-              aceite_termos: true,
+-              hash_termos: `${termsVersion}:${termsHash}`,
+-              data_aceite: acceptedAt,
+-            });
+-
+-            return NextResponse.json({
+-              success: true,
+-              reused: true,
+-            });
+-          }
+-        } catch (lookupError) {
+-          console.error("Lookup duplicate user failed", lookupError);
+-        }
+-      }
+-
+-      return NextResponse.json(
+-        { success: false, message: mapped.message },
+-        { status: mapped.status },
+-      );
+-    }
+-
+-    createdUserId = createResult.data.user.id;
++    const createResult = await admin.createUser({
++      email: normalizedEmail,
++      password,
++      email_confirm: true,
++      user_metadata: {
++        nome: trimmedNome,
++        telefone: trimmedTelefone,
++      },
++    });
++
++    let createdUserId: string | null = null;
++    let shouldGenerateLink = true;
++
++    if (createResult.error || !createResult.data.user) {
++      const mapped = mapSupabaseError(createResult.error?.message);
++
++      if (mapped.status === 409) {
++        try {
++          const existingUser = await findUserByEmail(
++            admin,
++            normalizedEmail,
++          );
++
++          if (existingUser) {
++            createdUserId = existingUser.id;
++            shouldGenerateLink = false;
++
++            await admin.updateUserById(existingUser.id, {
++              password,
++              user_metadata: {
++                nome: trimmedNome,
++                telefone: trimmedTelefone,
++              },
++            });
++          } else {
++            return NextResponse.json(
++              { success: false, message: mapped.message },
++              { status: mapped.status },
++            );
++          }
++        } catch (lookupError) {
++          console.error("Lookup duplicate user failed", lookupError);
++          return NextResponse.json(
++            { success: false, message: mapped.message },
++            { status: mapped.status },
++          );
++        }
++      } else {
++        return NextResponse.json(
++          { success: false, message: mapped.message },
++          { status: mapped.status },
++        );
++      }
++    } else {
++      createdUserId = createResult.data.user.id;
++    }
+@@
+-    const { error: linkError } = await admin.generateLink({
+-      type: "signup",
+-      email: normalizedEmail,
+-    });
+-
+-    if (linkError) {
+-      if (createdUserId) {
+-        await admin.deleteUser(createdUserId).catch((deleteError) => {
+-          console.error(
+-            "Failed to rollback user after link error",
+-            deleteError,
+-          );
+-        });
+-      }
+-      throw linkError;
+-    }
++    if (shouldGenerateLink) {
++      const { error: linkError } = await admin.generateLink({
++        type: "signup",
++        email: normalizedEmail,
++      });
++
++      if (linkError) {
++        if (createdUserId) {
++          await admin.deleteUser(createdUserId).catch((deleteError) => {
++            console.error(
++              "Failed to rollback user after link error",
++              deleteError,
++            );
++          });
++        }
++        throw linkError;
++      }
++    }
+*** End Patch
