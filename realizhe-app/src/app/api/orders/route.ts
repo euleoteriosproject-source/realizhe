@@ -71,10 +71,13 @@ export async function POST(request: Request) {
     const supabase = getSupabaseServiceClient();
 
     const normalizedPhone = normalizePhone(telefone);
+    const acceptedAt = new Date().toISOString();
+    const termsVersion = getTermsVersion();
+    const termsHash = getTermsHash();
 
     const { data: existingClient, error: selectError } = await supabase
       .from("clientes")
-      .select("id")
+      .select("id, aceite_termos")
       .or(
         `telefone.eq.${normalizedPhone}${
           email ? `,email.eq.${email}` : ""
@@ -86,51 +89,83 @@ export async function POST(request: Request) {
       throw selectError;
     }
 
-    let clienteId = existingClient?.id;
+    const acceptedFromRequest = Boolean(body.termsAccepted);
+    const alreadyAccepted = existingClient?.aceite_termos === true;
 
-    if (!clienteId) {
-      const { data: insertedClient, error: insertClientError } = await supabase
-        .from("clientes")
-        .insert({
-          nome,
-          email,
-          telefone: normalizedPhone,
-          cpf,
-          endereco,
-          cidade,
-          cep,
-        })
-        .select("id")
-        .single();
-      if (insertClientError) throw insertClientError;
-      clienteId = insertedClient.id;
+    if (!alreadyAccepted && !acceptedFromRequest) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Aceite os termos para concluir o pedido.",
+        },
+        { status: 400 },
+      );
     }
 
     const headers = request.headers;
     const forwardedFor = headers.get("x-forwarded-for");
     const clientIp = forwardedFor?.split(",")[0]?.trim();
 
-    const termsVersion = getTermsVersion();
-    const termsHash = getTermsHash();
+    const { data: ensuredCliente, error: ensureError } = await supabase.rpc(
+      "ensure_cliente_with_terms",
+      {
+        p_email: email,
+        p_phone: normalizedPhone,
+        p_nome: nome,
+        p_cpf: cpf ?? null,
+        p_endereco: endereco,
+        p_cidade: cidade,
+        p_cep: cep,
+        p_terms_version: termsVersion,
+        p_terms_hash: termsHash,
+        p_terms_acceptance: acceptedAt,
+        p_terms_ip: clientIp ?? null,
+      },
+    );
 
-    const { error: termsError } = await supabase.from("termos_aceite").insert({
-      cliente_id: clienteId,
-      versao_termos: termsVersion,
-      hash_termos: termsHash,
-      ip_cliente: clientIp ?? null,
-      aceitou_lgpd: true,
-    });
-    if (termsError) throw termsError;
+    if (ensureError) {
+      throw ensureError;
+    }
 
-    const { error: orderError } = await supabase.from("pedidos").insert({
-      cliente_id: clienteId,
-      tipo_pedido: order.tipo,
-      itens: order.itens,
-      valor_total: order.valorTotal ?? null,
-      forma_pagamento: formaPagamento,
-      observacoes: order.observacoes ?? null,
-      status: "pendente",
-    });
+    let clienteId: string | undefined;
+    if (Array.isArray(ensuredCliente) && ensuredCliente.length > 0) {
+      clienteId = (ensuredCliente[0] as { id?: string })?.id;
+    } else if (ensuredCliente && typeof ensuredCliente === "object") {
+      clienteId = (ensuredCliente as { id?: string }).id;
+    }
+
+    if (!clienteId) {
+      const { data: fallback, error: fallbackError } = await supabase
+        .from("clientes")
+        .select("id")
+        .or(
+          `telefone.eq.${normalizedPhone}${
+            email ? `,email.eq.${email}` : ""
+          }`.trim(),
+        )
+        .maybeSingle();
+      if (fallbackError) throw fallbackError;
+      clienteId = fallback?.id as string | undefined;
+    }
+
+    if (!clienteId) {
+      return NextResponse.json(
+        { success: false, message: "Nao foi possivel identificar o cliente." },
+        { status: 400 },
+      );
+    }
+
+    const { error: orderError } = await supabase.from("pedidos").insert(
+      {
+        cliente_id: clienteId,
+        tipo_pedido: order.tipo,
+        itens: order.itens,
+        valor_total: order.valorTotal ?? null,
+        forma_pagamento: formaPagamento,
+        observacoes: order.observacoes ?? null,
+      },
+      { returning: "minimal" },
+    );
     if (orderError) throw orderError;
 
     const whatsappMessage = buildStandardOrderMessage(
@@ -180,3 +215,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

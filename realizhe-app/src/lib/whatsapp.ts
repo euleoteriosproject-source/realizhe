@@ -41,7 +41,11 @@ export function buildStandardOrderMessage(
   return encodeURIComponent(lines.join("\n"));
 }
 
-export function buildCustomPlanMessage(base: BaseMessage, summary: string) {
+export function buildCustomPlanMessage(
+  base: BaseMessage,
+  summary: string,
+  attachmentUrl?: string,
+) {
   const lines: string[] = [
     "NOVO PLANO PERSONALIZADO - REALIZHE REAL FOOD",
     `Nome: ${base.customerName}`,
@@ -53,5 +57,9 @@ export function buildCustomPlanMessage(base: BaseMessage, summary: string) {
     "",
     `Forma de pagamento sugerida: ${base.payment}`,
   ];
+  if (attachmentUrl) {
+    lines.push("", `Arquivo enviado: ${attachmentUrl}`);
+  }
   return encodeURIComponent(lines.join("\n"));
 }
+

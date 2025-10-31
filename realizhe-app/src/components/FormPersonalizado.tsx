@@ -1,85 +1,173 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronLeft, ChevronRight, Loader2, Send } from "lucide-react";
 
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ModalTermos } from "@/components/ModalTermos";
+import { normalizePhone as normalizePhoneNumber } from "@/lib/whatsapp";
 
 const preferenciasOptions = [
   "Sem lactose",
-  "Sem glúten",
+  "Sem gluten",
   "Low carb",
   "Vegetariana",
   "Vegana",
-  "Alta proteína",
+  "Alta proteina",
   "Detox",
 ];
 
+const steps = ["Informacoes pessoais", "Preferencias", "Plano nutricional"];
+
+const digitsOnly = (value?: string | null) =>
+  value ? value.replace(/\D/g, "") : "";
+
+const formatPhone = (value?: string | null) => {
+  const digits = digitsOnly(value);
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  if (digits.length > 2) {
+    return `${digits.slice(0, 2)} ${digits.slice(2)}`;
+  }
+  return digits;
+};
+
+const formatCep = (value?: string | null) => {
+  const digits = digitsOnly(value);
+  if (digits.length === 8) {
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+  }
+  return digits;
+};
+
+const normalizeCep = (value?: string) => {
+  const digits = digitsOnly(value);
+  return digits.length ? digits : undefined;
+};
+
 const formSchema = z.object({
   nome: z.string().min(3, "Informe o nome completo."),
-  email: z.string().email("E-mail inválido.").optional().or(z.literal("")),
+  email: z.string().email("E-mail invalido.").optional().or(z.literal("")),
   telefone: z
     .string()
     .min(10, "Informe o telefone com DDD.")
-    .regex(/^\+?\d[\d\s-]{8,}$/, "Telefone inválido."),
-  endereco: z.string().min(5, "Informe o endereço completo."),
+    .superRefine((value, ctx) => {
+      const digits = value.replace(/\D/g, "");
+      if (digits.length < 10 || digits.length > 11) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Telefone invalido.",
+        });
+      }
+    }),
+  endereco: z.string().min(5, "Informe o endereco completo."),
   cidade: z.string().optional(),
   cep: z.string().optional(),
   formaPagamento: z.string().min(2, "Selecione uma forma de pagamento."),
-  frequencia: z.string().min(3, "Informe a frequência."),
+  frequencia: z.string().min(3, "Informe a frequencia."),
   preferencias: z
     .array(z.string())
-    .min(1, "Escolha ao menos uma preferência."),
+    .min(1, "Escolha ao menos uma preferencia."),
   objetivos: z.string().min(10, "Descreva seus objetivos nutricionais."),
   observacoes: z.string().optional(),
   arquivoPlano: z.any().optional(),
   aceitouTermos: z
     .boolean()
     .refine((value) => value === true, {
-      message: "Aceite os Termos e a Política de Privacidade para continuar.",
+      message: "Aceite os Termos e a Politica de Privacidade para continuar.",
     }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
-
-const steps = ["Informações pessoais", "Preferências", "Plano nutricional"];
 
 type FormPersonalizadoProps = {
   onSuccess?: () => void;
 };
 
 export function FormPersonalizado({ onSuccess }: FormPersonalizadoProps) {
+  const { cliente, user } = useAuth();
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [status, setStatus] = useState<"idle" | "loading" | "error" | "success">(
     "idle",
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      nome: "",
-      email: "",
-      telefone: "",
-      endereco: "",
-      cidade: "",
-      cep: "",
+  const defaults = useMemo(
+    () => ({
+      nome: cliente?.nome?.trim() ?? "",
+      email: cliente?.email?.trim() ?? user?.email?.trim() ?? "",
+      telefone: formatPhone(cliente?.telefone),
+      endereco: cliente?.endereco?.trim() ?? "",
+      cidade: cliente?.cidade?.trim() ?? "",
+      cep: formatCep(cliente?.cep),
       formaPagamento: "PIX",
       frequencia: "Semanal",
-      preferencias: [],
+      preferencias: [] as string[],
       objetivos: "",
       observacoes: "",
-      aceitouTermos: false,
-    },
+      arquivoPlano: undefined,
+      aceitouTermos: cliente?.aceite_termos ?? false,
+    }),
+    [cliente, user],
+  );
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: defaults,
   });
+
+  const termsAlreadyAccepted = defaults.aceitouTermos;
+
+  useEffect(() => {
+    const current = form.getValues();
+    const merged: FormValues = {
+      ...current,
+      nome: current.nome || defaults.nome,
+      email: current.email || defaults.email,
+      telefone: current.telefone || defaults.telefone,
+      endereco: current.endereco || defaults.endereco,
+      cidade: current.cidade || defaults.cidade,
+      cep: current.cep || defaults.cep,
+      formaPagamento: current.formaPagamento || defaults.formaPagamento,
+      frequencia: current.frequencia || defaults.frequencia,
+      preferencias: current.preferencias,
+      objetivos: current.objetivos,
+      observacoes: current.observacoes,
+      arquivoPlano: current.arquivoPlano,
+      aceitouTermos: defaults.aceitouTermos
+        ? true
+        : Boolean(current.aceitouTermos),
+    };
+
+    const shouldReset =
+      merged.nome !== current.nome ||
+      merged.email !== current.email ||
+      merged.telefone !== current.telefone ||
+      merged.endereco !== current.endereco ||
+      merged.cidade !== current.cidade ||
+      merged.cep !== current.cep ||
+      merged.formaPagamento !== current.formaPagamento ||
+      merged.frequencia !== current.frequencia ||
+      merged.aceitouTermos !== current.aceitouTermos;
+
+    if (shouldReset) {
+      form.reset(merged);
+    }
+  }, [defaults, form]);
 
   const { errors } = form.formState;
 
@@ -89,8 +177,7 @@ export function FormPersonalizado({ onSuccess }: FormPersonalizadoProps) {
       ["frequencia", "preferencias"],
       ["objetivos", "aceitouTermos"],
     ];
-    const fields = fieldsByStep[currentStep];
-    return form.trigger(fields);
+    return form.trigger(fieldsByStep[currentStep]);
   };
 
   const nextStep = async () => {
@@ -128,7 +215,11 @@ export function FormPersonalizado({ onSuccess }: FormPersonalizadoProps) {
             </div>
             <div>
               <Label htmlFor="telefone">Telefone/WhatsApp *</Label>
-              <Input id="telefone" {...form.register("telefone")} />
+              <Input
+                id="telefone"
+                placeholder="(51) 99999-0000"
+                {...form.register("telefone")}
+              />
               {errors.telefone && (
                 <p className="mt-1 text-xs text-primary">
                   {errors.telefone.message as string}
@@ -136,7 +227,7 @@ export function FormPersonalizado({ onSuccess }: FormPersonalizadoProps) {
               )}
             </div>
             <div className="sm:col-span-2">
-              <Label htmlFor="endereco">Endereço completo *</Label>
+              <Label htmlFor="endereco">Endereco completo *</Label>
               <Input id="endereco" {...form.register("endereco")} />
               {errors.endereco && (
                 <p className="mt-1 text-xs text-primary">
@@ -150,7 +241,11 @@ export function FormPersonalizado({ onSuccess }: FormPersonalizadoProps) {
             </div>
             <div>
               <Label htmlFor="cep">CEP</Label>
-              <Input id="cep" {...form.register("cep")} />
+              <Input
+                id="cep"
+                placeholder="90000-000"
+                {...form.register("cep")}
+              />
             </div>
             <div className="sm:col-span-2">
               <Label htmlFor="formaPagamento">
@@ -162,8 +257,8 @@ export function FormPersonalizado({ onSuccess }: FormPersonalizadoProps) {
                 {...form.register("formaPagamento")}
               >
                 <option value="PIX">PIX</option>
-                <option value="Cartao de credito">Cartão de crédito</option>
-                <option value="Cartao de debito">Cartão de débito</option>
+                <option value="Cartao de credito">Cartao de credito</option>
+                <option value="Cartao de debito">Cartao de debito</option>
                 <option value="Boleto">Boleto</option>
               </select>
               {errors.formaPagamento && (
@@ -178,7 +273,7 @@ export function FormPersonalizado({ onSuccess }: FormPersonalizadoProps) {
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="frequencia">Frequência desejada *</Label>
+              <Label htmlFor="frequencia">Frequencia desejada *</Label>
               <select
                 id="frequencia"
                 className="mt-2 h-12 w-full rounded-2xl border border-border bg-white px-4 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
@@ -196,34 +291,30 @@ export function FormPersonalizado({ onSuccess }: FormPersonalizadoProps) {
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">
-                Preferências alimentares *
+                Preferencias alimentares *
               </p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {preferenciasOptions.map((option) => {
-                  const checked = form.watch("preferencias").includes(option);
-                  return (
-                    <label
-                      key={option}
-                      className="flex items-center gap-3 rounded-2xl border border-border bg-white px-4 py-3 text-sm text-muted-foreground transition hover:border-primary/40"
-                    >
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={(state) => {
-                          const current = form.getValues("preferencias");
-                          if (state) {
-                            form.setValue("preferencias", [...current, option]);
-                          } else {
-                            form.setValue(
-                              "preferencias",
-                              current.filter((item) => item !== option),
-                            );
-                          }
-                        }}
-                      />
-                      {option}
-                    </label>
-                  );
-                })}
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                {preferenciasOptions.map((item) => (
+                  <label
+                    key={item}
+                    className="flex items-center gap-3 rounded-2xl border border-border bg-white px-4 py-3 text-sm text-muted-foreground shadow-sm transition hover:border-primary/60 hover:text-foreground"
+                  >
+                    <Checkbox
+                      checked={form.watch("preferencias").includes(item)}
+                      onCheckedChange={(checked) => {
+                        const current = form.getValues("preferencias");
+                        form.setValue(
+                          "preferencias",
+                          checked
+                            ? [...current, item]
+                            : current.filter((pref) => pref !== item),
+                          { shouldValidate: true },
+                        );
+                      }}
+                    />
+                    {item}
+                  </label>
+                ))}
               </div>
               {errors.preferencias && (
                 <p className="mt-1 text-xs text-primary">
@@ -233,14 +324,14 @@ export function FormPersonalizado({ onSuccess }: FormPersonalizadoProps) {
             </div>
           </div>
         );
-      default:
+      case 2:
         return (
           <div className="space-y-4">
             <div>
               <Label htmlFor="objetivos">Objetivos nutricionais *</Label>
               <Textarea
                 id="objetivos"
-                placeholder="Descreva metas, calorias, macros..."
+                placeholder="Conte sobre seus objetivos, rotina e desafios..."
                 {...form.register("objetivos")}
               />
               {errors.objetivos && (
@@ -250,10 +341,10 @@ export function FormPersonalizado({ onSuccess }: FormPersonalizadoProps) {
               )}
             </div>
             <div>
-              <Label htmlFor="observacoes">Observações adicionais</Label>
+              <Label htmlFor="observacoes">Observacoes adicionais</Label>
               <Textarea
                 id="observacoes"
-                placeholder="Restrições, horários, detalhes extras..."
+                placeholder="Restricoes, horarios, detalhes extras..."
                 {...form.register("observacoes")}
               />
             </div>
@@ -268,34 +359,39 @@ export function FormPersonalizado({ onSuccess }: FormPersonalizadoProps) {
                 {...form.register("arquivoPlano")}
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                Opcional. Tamanho máximo recomendado de 2 MB.
+                Opcional. Tamanho maximo recomendado de 2 MB.
               </p>
             </div>
-            <div className="flex items-start gap-3 rounded-2xl bg-accent/70 p-4">
-              <Checkbox
-                id="aceitouTermos"
-                checked={form.watch("aceitouTermos")}
-                onCheckedChange={(checked) =>
-                  form.setValue("aceitouTermos", Boolean(checked))
-                }
-              />
-              <div className="text-sm leading-relaxed text-muted-foreground">
-                <Label
-                  htmlFor="aceitouTermos"
-                  className="inline text-sm font-semibold text-foreground"
-                >
-                  Confirmo que li e aceito os Termos e a Política de Privacidade.
-                </Label>{" "}
-                <ModalTermos />
-                {errors.aceitouTermos && (
-                  <p className="mt-1 text-xs text-primary">
-                    {errors.aceitouTermos.message as string}
-                  </p>
-                )}
+            {termsAlreadyAccepted ? null : (
+              <div className="flex items-start gap-3 rounded-2xl bg-accent/70 p-4">
+                <Checkbox
+                  id="aceitouTermos"
+                  checked={form.watch("aceitouTermos")}
+                  onCheckedChange={(checked) =>
+                    form.setValue("aceitouTermos", Boolean(checked))
+                  }
+                />
+                <div className="text-sm leading-relaxed text-muted-foreground">
+                  <Label
+                    htmlFor="aceitouTermos"
+                    className="inline text-sm font-semibold text-foreground"
+                  >
+                    Confirmo que li e aceito os Termos e a Politica de
+                    Privacidade.
+                  </Label>{" "}
+                  <ModalTermos />
+                  {errors.aceitouTermos && (
+                    <p className="mt-1 text-xs text-primary">
+                      {errors.aceitouTermos.message as string}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         );
+      default:
+        return null;
     }
   };
 
@@ -304,10 +400,21 @@ export function FormPersonalizado({ onSuccess }: FormPersonalizadoProps) {
     setErrorMessage(null);
 
     try {
-      let encodedFile: string | undefined;
+      let attachment:
+        | {
+            name?: string;
+            type?: string;
+            data: string;
+          }
+        | undefined;
       const fileList = values.arquivoPlano as FileList | undefined;
       if (fileList && fileList.length > 0) {
-        encodedFile = await fileToBase64(fileList[0]);
+        const file = fileList[0];
+        attachment = {
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          data: await fileToBase64(file),
+        };
       }
 
       const response = await fetch("/api/personalizados", {
@@ -315,12 +422,12 @@ export function FormPersonalizado({ onSuccess }: FormPersonalizadoProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customer: {
-            nome: values.nome,
-            email: values.email,
-            telefone: values.telefone,
-            endereco: values.endereco,
-            cidade: values.cidade,
-            cep: values.cep,
+            nome: values.nome.trim(),
+            email: values.email?.trim() || undefined,
+            telefone: normalizePhoneNumber(values.telefone),
+            endereco: values.endereco.trim(),
+            cidade: values.cidade?.trim() || undefined,
+            cep: normalizeCep(values.cep),
             formaPagamento: values.formaPagamento,
           },
           plano: {
@@ -329,9 +436,9 @@ export function FormPersonalizado({ onSuccess }: FormPersonalizadoProps) {
             objetivos: values.objetivos,
             observacoes: values.observacoes,
             valorEstimado: undefined,
-            arquivoPlano: encodedFile,
+            arquivoPlano: attachment,
           },
-          termsAccepted: values.aceitouTermos,
+          termsAccepted: termsAlreadyAccepted ? true : values.aceitouTermos,
         }),
       });
 
@@ -343,7 +450,15 @@ export function FormPersonalizado({ onSuccess }: FormPersonalizadoProps) {
       setStatus("success");
       onSuccess?.();
       window.open(data.whatsappUrl, "_blank");
-      form.reset();
+      router.push("/");
+      form.reset({
+        ...defaults,
+        preferencias: [],
+        objetivos: "",
+        observacoes: "",
+        arquivoPlano: undefined,
+        aceitouTermos: defaults.aceitouTermos,
+      });
       setCurrentStep(0);
     } catch (error) {
       setStatus("error");
@@ -421,7 +536,7 @@ export function FormPersonalizado({ onSuccess }: FormPersonalizadoProps) {
             className="w-full justify-center gap-2 sm:max-w-[280px]"
             onClick={nextStep}
           >
-            Avançar
+            Avancar
             <ChevronRight className="h-4 w-4" />
           </Button>
         )}
@@ -445,3 +560,4 @@ function fileToBase64(file: File) {
     reader.readAsDataURL(file);
   });
 }
+

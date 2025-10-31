@@ -1,18 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Send } from "lucide-react";
 
 import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ModalTermos } from "@/components/ModalTermos";
+import { normalizePhone as normalizePhoneNumber } from "@/lib/whatsapp";
+
+const digitsOnly = (value?: string | null) =>
+  value ? value.replace(/\D/g, "") : "";
+
+const formatPhone = (value?: string | null) => {
+  const digits = digitsOnly(value);
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  if (digits.length > 2) {
+    return `${digits.slice(0, 2)} ${digits.slice(2)}`;
+  }
+  return digits;
+};
+
+const formatCep = (value?: string | null) => {
+  const digits = digitsOnly(value);
+  if (digits.length === 8) {
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+  }
+  return digits;
+};
+
+const normalizeCep = (value?: string) => {
+  const digits = digitsOnly(value);
+  return digits.length ? digits : undefined;
+};
 
 const formSchema = z.object({
   nome: z.string().min(3, "Informe o nome completo."),
@@ -20,7 +53,15 @@ const formSchema = z.object({
   telefone: z
     .string()
     .min(10, "Informe o telefone com DDD.")
-    .regex(/^\+?\d[\d\s-]{8,}$/, "Telefone inválido."),
+    .superRefine((value, ctx) => {
+      const digits = value.replace(/\D/g, "");
+      if (digits.length < 10 || digits.length > 11) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Telefone inválido.",
+        });
+      }
+    }),
   endereco: z.string().min(5, "Informe o endereço completo."),
   cidade: z.string().optional(),
   cep: z.string().optional(),
@@ -41,25 +82,66 @@ type FormCadastroProps = {
 
 export function FormCadastro({ onSuccess }: FormCadastroProps) {
   const { items, total, clear } = useCart();
+  const { cliente, user } = useAuth();
+  const router = useRouter();
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">(
     "idle",
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      nome: "",
-      email: "",
-      telefone: "",
-      endereco: "",
-      cidade: "",
-      cep: "",
+  const defaults = useMemo(
+    () => ({
+      nome: cliente?.nome?.trim() ?? "",
+      email: cliente?.email?.trim() ?? user?.email?.trim() ?? "",
+      telefone: formatPhone(cliente?.telefone),
+      endereco: cliente?.endereco?.trim() ?? "",
+      cidade: cliente?.cidade?.trim() ?? "",
+      cep: formatCep(cliente?.cep),
       formaPagamento: "PIX",
       observacoes: "",
-      aceitouTermos: false,
-    },
+      aceitouTermos: cliente?.aceite_termos ?? false,
+    }),
+    [cliente, user],
+  );
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: defaults,
   });
+
+  const termsAlreadyAccepted = defaults.aceitouTermos;
+
+  useEffect(() => {
+    const current = form.getValues();
+    const merged: FormValues = {
+      ...current,
+      nome: current.nome || defaults.nome,
+      email: current.email || defaults.email,
+      telefone: current.telefone || defaults.telefone,
+      endereco: current.endereco || defaults.endereco,
+      cidade: current.cidade || defaults.cidade,
+      cep: current.cep || defaults.cep,
+      formaPagamento: current.formaPagamento || defaults.formaPagamento,
+      observacoes: current.observacoes,
+      aceitouTermos: defaults.aceitouTermos
+        ? true
+        : Boolean(current.aceitouTermos),
+    };
+
+    const shouldReset =
+      merged.nome !== current.nome ||
+      merged.email !== current.email ||
+      merged.telefone !== current.telefone ||
+      merged.endereco !== current.endereco ||
+      merged.cidade !== current.cidade ||
+      merged.cep !== current.cep ||
+      merged.formaPagamento !== current.formaPagamento ||
+      merged.aceitouTermos !== current.aceitouTermos;
+
+    if (shouldReset) {
+      form.reset(merged);
+    }
+  }, [defaults, form]);
 
   const disabled = items.length === 0 || status === "loading";
 
@@ -69,6 +151,9 @@ export function FormCadastro({ onSuccess }: FormCadastroProps) {
     setErrorMessage(null);
 
     try {
+      const normalizedPhone = normalizePhoneNumber(values.telefone);
+      const normalizedCep = normalizeCep(values.cep);
+
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: {
@@ -76,12 +161,12 @@ export function FormCadastro({ onSuccess }: FormCadastroProps) {
         },
         body: JSON.stringify({
           customer: {
-            nome: values.nome,
-            email: values.email,
-            telefone: values.telefone,
-            endereco: values.endereco,
-            cidade: values.cidade,
-            cep: values.cep,
+            nome: values.nome.trim(),
+            email: values.email?.trim() || undefined,
+            telefone: normalizedPhone,
+            endereco: values.endereco.trim(),
+            cidade: values.cidade?.trim() || undefined,
+            cep: normalizedCep ?? null,
             formaPagamento: values.formaPagamento,
           },
           order: {
@@ -95,7 +180,7 @@ export function FormCadastro({ onSuccess }: FormCadastroProps) {
             valorTotal: total,
             observacoes: values.observacoes,
           },
-          termsAccepted: values.aceitouTermos,
+          termsAccepted: termsAlreadyAccepted ? true : values.aceitouTermos,
         }),
       });
 
@@ -108,6 +193,7 @@ export function FormCadastro({ onSuccess }: FormCadastroProps) {
       clear();
       onSuccess?.();
       window.open(data.whatsappUrl, "_blank");
+      router.push("/");
     } catch (error) {
       setStatus("error");
       setErrorMessage(
@@ -139,7 +225,11 @@ export function FormCadastro({ onSuccess }: FormCadastroProps) {
         </div>
         <div>
           <Label htmlFor="telefone">Telefone/WhatsApp *</Label>
-          <Input id="telefone" placeholder="51 99999-0000" {...form.register("telefone")} />
+          <Input
+            id="telefone"
+            placeholder="51 99999-0000"
+            {...form.register("telefone")}
+          />
           {form.formState.errors.telefone && (
             <p className="mt-1 text-xs text-primary">
               {form.formState.errors.telefone.message}
@@ -191,32 +281,33 @@ export function FormCadastro({ onSuccess }: FormCadastroProps) {
         </div>
       </div>
 
-      <div className="flex items-start gap-3 rounded-2xl bg-accent/70 p-4">
-        <Checkbox
-          id="aceitouTermos"
-          checked={form.watch("aceitouTermos")}
-          onCheckedChange={(checked) =>
-            form.setValue("aceitouTermos", Boolean(checked))
-          }
-        />
-        <div className="text-sm leading-relaxed text-muted-foreground">
-          <Label
-            htmlFor="aceitouTermos"
-            className="inline text-sm font-semibold text-foreground"
-          >
-            Li e aceito os Termos e Condições e a Política de Privacidade.
-          </Label>{" "}
-          <ModalTermos />
-          <div>
-            {form.formState.errors.aceitouTermos && (
-              <p className="mt-1 text-xs text-primary">
-                {form.formState.errors.aceitouTermos.message}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-
+      {termsAlreadyAccepted ? null : (
+        <div className="flex items-start gap-3 rounded-2xl bg-accent/70 p-4">
+          <Checkbox
+            id="aceitouTermos"
+            checked={form.watch("aceitouTermos")}
+            onCheckedChange={(checked) =>
+              form.setValue("aceitouTermos", Boolean(checked))
+            }
+          />
+          <div className="text-sm leading-relaxed text-muted-foreground">
+            <Label
+              htmlFor="aceitouTermos"
+              className="inline text-sm font-semibold text-foreground"
+            >
+              Li e aceito os Termos e Condições e a Política de Privacidade.
+            </Label>{" "}
+            <ModalTermos />
+            <div>
+              {form.formState.errors.aceitouTermos && (
+                <p className="mt-1 text-xs text-primary">
+                  {form.formState.errors.aceitouTermos.message}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {errorMessage && (
         <p className="text-sm font-semibold text-primary">{errorMessage}</p>
       )}
