@@ -1,5 +1,5 @@
 export const CATEGORY_LABELS: Record<string, string> = {
-  equilibrio: "Linha Equilibrio",
+  equilibrio: "Linha Equilíbrio",
   gourmet: "Linha Gourmet",
   lowcarb: "Linha Performance",
   bemestar: "Linha Bem-estar",

@@ -1,7 +1,5 @@
 ﻿"use client";
 
-import Image from "next/image";
-
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Menu, ShoppingBag } from "lucide-react";
@@ -33,15 +31,10 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-transparent bg-white/80 backdrop-blur-lg">
       <div className="container flex h-20 items-center justify-between gap-6">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="relative h-14 w-36">
-            <Image
-              src="/logo-realizhe.svg"
-              alt="Realizhe Real Food"
-              fill
-              priority
-            />
-          </div>
+        <Link href="/" className="flex items-center">
+          <span className="rounded-full bg-primary px-4 py-2 text-base font-semibold uppercase tracking-[0.28em] text-white">
+            Realizhe
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex">
