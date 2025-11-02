@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { getSupabaseServiceClient } from "@/lib/supabaseClient";
 import { getTermsHash, getTermsVersion } from "@/lib/legal";
@@ -155,17 +157,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const { error: orderError } = await supabase.from("pedidos").insert(
-      {
-        cliente_id: clienteId,
-        tipo_pedido: order.tipo,
-        itens: order.itens,
-        valor_total: order.valorTotal ?? null,
-        forma_pagamento: formaPagamento,
-        observacoes: order.observacoes ?? null,
-      },
-      { returning: "minimal" },
-    );
+    const { error: orderError } = await supabase.from("pedidos").insert({
+      cliente_id: clienteId,
+      tipo_pedido: order.tipo,
+      itens: order.itens,
+      valor_total: order.valorTotal ?? null,
+      forma_pagamento: formaPagamento,
+      observacoes: order.observacoes ?? null,
+    });
     if (orderError) throw orderError;
 
     const whatsappMessage = buildStandardOrderMessage(

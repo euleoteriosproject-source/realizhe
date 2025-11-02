@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { getSupabaseServiceClient, upsertCliente } from "@/lib/supabaseClient";
 import { getTermsHash, getTermsVersion } from "@/lib/legal";

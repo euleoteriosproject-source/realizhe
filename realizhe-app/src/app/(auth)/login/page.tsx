@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,7 +18,7 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-export default function LoginPage() {
+function LoginFormContent() {
   const { signIn, loading } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
@@ -98,5 +98,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="py-12 sm:py-16" />}>
+      <LoginFormContent />
+    </Suspense>
   );
 }
