@@ -24,13 +24,13 @@ export const metadata: Metadata = {
   title: "Realizhe Real Food",
   description:
     "Realizhe Real Food - alimentação com propósito. Marmitas saudáveis, sopas funcionais e crepiocas artesanais feitas por nutricionistas.",
-  icons: { icon: "/favicon.ico" },
-  metadataBase: new URL("https://realizhe-real-food.vercel.app"),
+  icons: { icon: "/favicon.svg" },
+  metadataBase: new URL("https://realizhe-app.vercel.app"),
   openGraph: {
     title: "Realizhe Real Food",
     description:
       "Planos de alimentação saudável com marmitas personalizadas e boxes semanais.",
-    url: "https://realizhe-real-food.vercel.app",
+    url: "https://realizhe-app.vercel.app",
     siteName: "Realizhe Real Food",
     locale: "pt_BR",
     type: "website",

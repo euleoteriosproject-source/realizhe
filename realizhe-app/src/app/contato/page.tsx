@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
+  icons: { icon: "/favicon.svg" },
   title: "Contato - Realizhe Real Food",
   description:
     "Fale com a Realizhe Real Food por WhatsApp, e-mail ou redes sociais. Atendimento humanizado para tirar dúvidas.",
@@ -47,7 +48,7 @@ export default function ContatoPage() {
         </p>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button asChild size="lg" className="gap-2 px-8">
-            <Link href="https://wa.me/5551992476399" target="_blank">
+            <Link href="https://wa.me/5551992476399?text=Olá%20Realizhe!%20Cheguei%20pelo%20site%20e%20quero%20saber%20mais%20sobre%20vocês." target="_blank">
               Falar no WhatsApp
             </Link>
           </Button>

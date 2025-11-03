@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { FormPersonalizado } from "@/components/FormPersonalizado";
 
 export const metadata: Metadata = {
+  icons: { icon: "/favicon.svg" },
   title: "Refeições Personalizadas - Realizhe Real Food",
   description:
     "Solicite planos de alimentação sob medida com acompanhamento nutricional e integração direta ao WhatsApp.",

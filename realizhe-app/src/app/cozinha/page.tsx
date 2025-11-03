@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
+  icons: { icon: "/favicon.svg" },
   title: "Cozinha - Realizhe Real Food",
   description:
     "Conheça a estrutura da cozinha Realizhe: processos, equipamentos e controles de qualidade aplicados.",

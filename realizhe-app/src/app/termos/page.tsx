@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { termsText, TERMS_VERSION } from "@/data/legal";
 
 export const metadata: Metadata = {
+  icons: { icon: "/favicon.svg" },
   title: "Termos e Condições - Realizhe Real Food",
   description:
     "Leia os Termos de Fornecimento da Realizhe Real Food, incluindo políticas de entrega, cancelamento e LGPD.",

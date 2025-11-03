@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
+  icons: { icon: "/favicon.svg" },
   title: "Sobre - Realizhe Real Food",
   description:
     "Conheça a história da Realizhe Real Food, empresa de marmitas saudáveis fundada por Aline Chaves Guerreiro em Porto Alegre.",

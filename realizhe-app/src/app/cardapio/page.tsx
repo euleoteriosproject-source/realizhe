@@ -4,6 +4,7 @@ import { fetchProductsServer } from "@/lib/productService";
 import { ProductGrid } from "@/components/cardapio/ProductGrid";
 
 export const metadata: Metadata = {
+  icons: { icon: "/favicon.svg" },
   title: "Cardápio - Realizhe Real Food",
   description:
     "Veja os boxes de marmitas saudáveis, sopas funcionais e crepiocas da Realizhe Real Food.",

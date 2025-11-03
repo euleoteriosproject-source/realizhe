@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { privacyText } from "@/data/legal";
 
 export const metadata: Metadata = {
+  icons: { icon: "/favicon.svg" },
   title: "Política de Privacidade - Realizhe Real Food",
   description:
     "Política de Privacidade e LGPD da Realizhe Real Food, incluindo direitos do titular e canais de atendimento.",

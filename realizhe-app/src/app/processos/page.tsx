@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
+  icons: { icon: "/favicon.svg" },
   title: "Processos - Realizhe Real Food",
   description:
     "Conheça os processos de atendimento, pedido, produção e entrega da Realizhe Real Food.",
