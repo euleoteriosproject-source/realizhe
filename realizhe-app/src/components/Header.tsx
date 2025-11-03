@@ -17,7 +17,7 @@ const navLinks = [
   { href: "/sobre", label: "Sobre" },
   { href: "/cozinha", label: "Cozinha" },
   { href: "/processos", label: "Processos" },
-  { href: "/cardapio", label: "Cardapio" },
+  { href: "/cardapio", label: "Cardápio" },
   { href: "/personalizadas", label: "Personalizadas" },
   { href: "/contato", label: "Contato" },
 ];

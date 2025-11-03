@@ -3,7 +3,7 @@ import Link from "next/link";
 const footerLinks = [
   { label: "Termos de uso", href: "/termos" },
   { label: "Privacidade", href: "/privacidade" },
-  { label: "Cardapio", href: "/cardapio" },
+  { label: "Cardápio", href: "/cardapio" },
   { label: "Personalizadas", href: "/personalizadas" },
 ];
 
@@ -17,7 +17,7 @@ export function Footer() {
               Realizhe Real Food
             </p>
             <p className="text-sm text-muted-foreground">
-              Alimentacao com proposito. Marmitas saudaveis, sopas funcionais e
+              Alimentação com propósito. Marmitas saudáveis, sopas funcionais e
               crepiocas pensadas por nutricionistas e chefs.
             </p>
           </div>
