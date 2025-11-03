@@ -43,7 +43,7 @@ Gestão de pedidos, atendimento ao cliente, comunicações transacionais e emiss
 Dados são compartilhados apenas com serviços essenciais (processadores de pagamento, logística e Supabase).
 
 5. Direitos do Titular
-Solicitar acesso, correções, portabilidade ou exclusão via WhatsApp (51) 98289-5068.
+Solicitar acesso, correções, portabilidade ou exclusão via WhatsApp (51) ‪99247-6399‬.
 
 6. Retenção
 Dados sobre transações são mantidos pelo período legal mínimo de 5 anos.

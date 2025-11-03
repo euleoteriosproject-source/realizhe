@@ -184,7 +184,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      whatsappUrl: `https://wa.me/5551982895068?text=${whatsappMessage}`,
+      whatsappUrl: `https://wa.me/5551‪992476399‬?text=${whatsappMessage}`,
     });
   } catch (error) {
     console.error("Order submission error", error);

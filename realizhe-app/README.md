@@ -13,7 +13,7 @@ Plataforma de pedidos para a marca Realizhe Real Food. Construida com Next.js 14
 - shadcn/ui (Button, Dialog, Card, Input, Checkbox, Badge...)
 - Framer Motion para microinteracoes
 - Supabase (Postgres) para persistir clientes, pedidos e termos
-- Integracao WhatsApp via `https://wa.me/5551982895068`
+- Integracao WhatsApp via `https://wa.me/5551‪992476399‬`
 
 ## Estrutura
 

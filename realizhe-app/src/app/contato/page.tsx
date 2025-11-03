@@ -12,8 +12,8 @@ export const metadata: Metadata = {
 const canais = [
   {
     title: "WhatsApp comercial",
-    value: "(51) 98289-5068",
-    href: "https://wa.me/5551982895068",
+    value: "(51) ‪99247-6399‬",
+    href: "https://wa.me/5551‪992476399‬",
     description: "Atendimento de segunda a sexta, 9h às 18h.",
   },
   {
@@ -47,7 +47,7 @@ export default function ContatoPage() {
         </p>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button asChild size="lg" className="gap-2 px-8">
-            <Link href="https://wa.me/5551982895068" target="_blank">
+            <Link href="https://wa.me/5551‪992476399‬" target="_blank">
               Falar no WhatsApp
             </Link>
           </Button>

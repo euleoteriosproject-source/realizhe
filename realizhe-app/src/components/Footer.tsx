@@ -35,9 +35,9 @@ export function Footer() {
             WhatsApp:{" "}
             <Link
               className="font-semibold text-primary underline-offset-4 hover:underline"
-              href="https://wa.me/5551982895068"
+              href="https://wa.me/5551‪992476399‬"
             >
-              (51) 98289-5068
+              (51) ‪99247-6399‬
             </Link>
           </p>
           <p>
