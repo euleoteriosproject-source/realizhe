@@ -52,7 +52,7 @@ export default function PersonalizadasPage() {
               Precisa de suporte imediato? Chame no WhatsApp{" "}
               <a
                 className="font-semibold text-primary underline-offset-4 hover:underline"
-                href="https://wa.me/5551992476399"
+                href="https://wa.me/5551992476399?text=Olá%20Realizhe!%20Cheguei%20pelo%20site%20e%20e%20preciso%20de%20suporte."
               >
                 (51) 99247-6399
               </a>

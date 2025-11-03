@@ -13,7 +13,7 @@ const canais = [
   {
     title: "WhatsApp comercial",
     value: "(51) 99247-6399",
-    href: "https://wa.me/5551992476399",
+    href: "https://wa.me/5551992476399?text=Olá%20Realizhe!%20Cheguei%20pelo%20site%e%20e%20quero%20saber%20mais%20sobre%20vocês.",
     description: "Atendimento de segunda a sexta, 9h às 18h.",
   },
   {
