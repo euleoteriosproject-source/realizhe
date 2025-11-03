@@ -226,7 +226,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      whatsappUrl: `https://wa.me/5551‪992476399‬?text=${encodedMessage}`,
+      whatsappUrl: `https://wa.me/5551992476399?text=${encodedMessage}`,
     });
   } catch (error) {
     console.error("Personalizado submission error", error);
